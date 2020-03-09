@@ -5,10 +5,13 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
 import ru.otus.spring.domain.Person;
+import ru.otus.spring.exceptions.NoSuchUserException;
 import ru.otus.spring.repostory.PersonRepository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RestController
@@ -51,9 +54,25 @@ public class PersonController {
             value = "/personId",
             method = RequestMethod.GET
     )
-    public PersonDto get(@RequestParam(value = "id") int id, Model model) {
-        Person personDto = repository.findById(id).get();
-        return PersonDto.toDto(personDto);
+    public PersonDto get(@RequestParam(value = "id") int id, Model model) throws NoSuchUserException {
+        Optional<Person> personDto = repository.findById(id);
+
+        if (!personDto.isPresent()){
+            throw new NoSuchUserException(id);//custom Exception if there is no such user id
+        }
+        return PersonDto.toDto(personDto.get());
+    }
+
+    /**
+     * for handle Custom exception
+     * @param e
+     * @return
+     */
+    @ExceptionHandler(NoSuchUserException.class)
+    public ModelAndView handleNPE(NoSuchUserException e){
+        ModelAndView modelAndView = new ModelAndView("err500");
+        modelAndView.addObject("messge", e.getMessage());
+        return modelAndView;
     }
 
 
@@ -75,15 +94,14 @@ public class PersonController {
     /**
      * 1) receive json in post - request from postman (@RequestBody) and it to the repository
      * 2) return list of person to the postman (@ResponseBody)
-     * Poatman -> http://localhost:8080/create -> POST -> raw -> JSON -> {"id" :"4","name": "Ivan Ivanich"}
+     * Poatman -> http://localhost:8080/create -> POST -> Body -> raw -> JSON -> 	[{"id" :"4","name": "Ivan Ivanich"},{"id" :"5","name": "Maniy"}]
      * @param person
      */
 //    @RequestMapping(value = "/create", method = RequestMethod.POST,produces = "application/xml")
     @RequestMapping(value = "/create", method = RequestMethod.POST,produces = MediaType.APPLICATION_JSON_VALUE)
-    public @ResponseBody List<Person> savePerson(@RequestBody Person person) {
-        repository.save(person);
+    public @ResponseBody List<Person> savePerson(@RequestBody List<Person> person) {
+        person.forEach(repository::save);
         List<Person> all = repository.findAll();
-        all.forEach(person1 -> System.err.println(person1));
         return all;
     }
 
