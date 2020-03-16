@@ -8,7 +8,6 @@ import ru.otus.spring.domain.Person;
 import ru.otus.spring.repostory.PersonRepository;
 
 import javax.annotation.PostConstruct;
-import java.util.List;
 
 @EnableMapRepositories
 @SpringBootApplication
